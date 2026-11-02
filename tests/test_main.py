@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+import pytest
 
 from main import app
 from dependencies import get_employee_service
@@ -8,7 +9,8 @@ from tests.test_employee_repository import test_update_employee
 client = TestClient(app)
 
 class FakeEmployeeService:
-    def get_employees(self):
+    @pytest.mark.asyncio
+    async def get_employees(self):
         return [
             {
                 "id": 1,
@@ -16,9 +18,11 @@ class FakeEmployeeService:
                 "email": "john@example.com",
                 "designation": "Developer",
                 "salary": 60000.0,
+                "department_id": 1
             }
         ]
-    def get_employee_by_id(self, employee_id: int):
+    @pytest.mark.asyncio
+    async def get_employee_by_id(self, employee_id: int):
         if employee_id == 1:
             return {
                 "id": 1,
@@ -26,17 +30,21 @@ class FakeEmployeeService:
                 "email": "john@example.com",
                 "designation": "Developer",
                 "salary": 60000.0,
+                "department_id": 1
             }
         return None
-    def add_employee(self, employee):
+    @pytest.mark.asyncio
+    async def add_employee(self, employee):
         return {
             "id": 2,
             "name": employee.name,
             "email": employee.email,
             "designation": employee.designation,
             "salary": employee.salary,
+            "department_id": employee.department_id
         }
-    def update_employee(self, employee_id: int, updated_employee):
+    @pytest.mark.asyncio
+    async def update_employee(self, employee_id: int, updated_employee):
         if employee_id == 1:
             return {
                 "id": 1,
@@ -44,51 +52,56 @@ class FakeEmployeeService:
                 "email": updated_employee.email,
                 "designation": updated_employee.designation,
                 "salary": updated_employee.salary,
+                "department_id": updated_employee.department_id
             }
         return None
-    def delete_employee(self, employee_id: int):
+    @pytest.mark.asyncio
+    async def delete_employee(self, employee_id: int):
         if employee_id == 1:
             return {"message": "Employee deleted successfully"}
         return None
 
-def test_get_employees():
+@pytest.mark.asyncio
+async def test_get_employees(authenticated_client):
     app.dependency_overrides[get_employee_service] = (
         lambda: FakeEmployeeService()
     )
     try:
-        response = client.get("/employee/getall")
+        response = authenticated_client.get("/employees/")
 
         assert response.status_code == 200
         assert len(response.json()) == 1
         assert response.json()[0]["name"] == "John Doe"
     finally:
         app.dependency_overrides.clear()
-
-def test_get_employee_by_id():
+@pytest.mark.asyncio
+async def test_get_employee_by_id(authenticated_client):
     app.dependency_overrides[get_employee_service] = (
         lambda: FakeEmployeeService()
     )
     try:
-        response = client.get("/employee/1")
+        response = authenticated_client.get("/employees/1")
 
         assert response.status_code == 200
         assert response.json()["name"] == "John Doe"
     finally:
         app.dependency_overrides.clear()
 
-def test_get_employee_by_id_not_found():
+@pytest.mark.asyncio
+async def test_get_employee_by_id_not_found(authenticated_client):
     app.dependency_overrides[get_employee_service] = (
         lambda: FakeEmployeeService()
     )
     try:
-        response = client.get("/employee/999")
+        response = authenticated_client.get("/employees/999")
 
         assert response.status_code == 404
         assert response.json()["detail"] == "Employee not found"
     finally:
         app.dependency_overrides.clear()
 
-def test_add_employee():
+@pytest.mark.asyncio
+async def test_add_employee(authenticated_client):
     app.dependency_overrides[get_employee_service] = (
         lambda: FakeEmployeeService()
     )
@@ -99,14 +112,15 @@ def test_add_employee():
             "designation": "Product Manager",
             "salary": 80000.0
         }
-        response = client.post("/employee/add", json=new_employee)
+        response = authenticated_client.post("/employees/add", json=new_employee)
 
         assert response.status_code == 200
         assert response.json()["name"] == "Alice Johnson"
     finally:
         app.dependency_overrides.clear()
 
-def test_update_employee():
+@pytest.mark.asyncio
+async def test_update_employee():
     app.dependency_overrides[get_employee_service] = (
         lambda: FakeEmployeeService()
     )
@@ -117,14 +131,15 @@ def test_update_employee():
             "designation": "Senior Developer",
             "salary": 70000.0
         }
-        response = client.put("/employee/1", json=updated_employee)
+        response = client.put("/employees/update/1", json=updated_employee)
 
         assert response.status_code == 200
         assert response.json()["name"] == "John Doe Updated"
     finally:
         app.dependency_overrides.clear()
 
-def test_update_employee_not_found():
+@pytest.mark.asyncio
+async def test_update_employee_not_found():
     app.dependency_overrides[get_employee_service] = (
         lambda: FakeEmployeeService()
     )
@@ -135,19 +150,20 @@ def test_update_employee_not_found():
             "designation": "Manager",
             "salary": 70000.0
         }
-        response = client.put("/employee/999", json=updated_employee)
+        response = client.put("/employees/update/999", json=updated_employee)
 
         assert response.status_code == 404
         assert response.json()["detail"] == "Employee not found"
     finally:
         app.dependency_overrides.clear()
 
-def test_delete_employee():
+@pytest.mark.asyncio
+async def test_delete_employee():
     app.dependency_overrides[get_employee_service] = (
         lambda: FakeEmployeeService()
     )
     try:
-        response = client.delete("/employee/1")
+        response = client.delete("/employees/delete/1")
 
         assert response.status_code == 200
         assert response.json()["message"] == "Employee deleted successfully"

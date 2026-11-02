@@ -1,37 +1,49 @@
-
 import os
 
 from dotenv import load_dotenv
-from sqlalchemy import text
 from sqlalchemy.engine import URL
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+from sqlalchemy.ext.asyncio import (
+    create_async_engine,
+    async_sessionmaker,
+)
 
 load_dotenv()
 
-
 def build_url(database_name: str):
+    cloud_sql_socket = os.getenv("INSTANCE_UNIX_SOCKET")
+
+    if cloud_sql_socket:
+        return URL.create(
+            "postgresql+asyncpg",
+            username=os.environ["POSTGRES_USER"],
+            password=os.environ["POSTGRES_PASSWORD"],
+            database=database_name,
+            query={
+                "host": f"{cloud_sql_socket}/.s.PGSQL.5432"
+            },
+        )
+
     return URL.create(
         "postgresql+asyncpg",
         username=os.environ["POSTGRES_USER"],
         password=os.environ["POSTGRES_PASSWORD"],
         host=os.getenv("POSTGRES_HOST", "localhost"),
-        port=int(os.getenv("POSTGRES_PORT", "5433")),
-        database=database_name,
+        port=int(os.getenv("POSTGRES_PORT", "5432")),
+        database=database_name
     )
 
 
-# NEW: Create the engine for the application database.
 engine = create_async_engine(
     build_url(os.environ["POSTGRES_DB"]),
     pool_pre_ping=True,
+    pool_size=5,
+    max_overflow=2,
 )
 
-# NEW: Use the same async session pattern as SQL Server.
 SessionFactory = async_sessionmaker(
     engine,
     expire_on_commit=False,
 )
-
 
 async def initialize_database():
     database_name = os.environ["POSTGRES_DB"]

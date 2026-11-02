@@ -7,8 +7,8 @@ from sqlalchemy import func, update
 from sqlalchemy.dialects.postgresql import insert as postgres_insert
 from sqlalchemy.exc import IntegrityError
 
-from database import SessionFactory as sqlserver_session_factory
-from database_postgres import SessionFactory as postgres_session_factory
+
+
 from models.daily_employee_stats import DailyEmployeeStats
 from logging_config import logger as log
 
@@ -17,8 +17,10 @@ async def record_employee_creation():
     switch = os.getenv("DB_SWITCH", "sqlserver").lower()
 
     if switch == "postgres":
+        from database_postgres import SessionFactory as postgres_session_factory
         session_factory = postgres_session_factory
     elif switch == "sqlserver":
+        from database import SessionFactory as sqlserver_session_factory
         session_factory = sqlserver_session_factory
     else:
         log.error("Unsupported database: %s", switch)

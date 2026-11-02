@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 
 
 from auth_dependencies import get_current_user, require_role
@@ -30,12 +30,20 @@ async def get_employee_by_id(employee_id: int, employee_service: employee_servic
     else:
         raise HTTPException(status_code=404, detail="Employee not found")
 
+
 @router.post("/add", response_model=employeeResponse)
-async def add_employee(employee: employeeCreate, employee_service: employee_service = Depends(get_employee_service),
-                       current_user = Depends(require_role(UserRole.ADMIN))):
+async def add_employee(
+    employee: employeeCreate,
+    background_tasks: BackgroundTasks,
+    employee_service: employee_service = Depends(get_employee_service),
+    current_user: User = Depends(require_role(UserRole.ADMIN)),
+):
     new_employee = await employee_service.add_employee(employee)
-    await record_employee_creation()
+
+    background_tasks.add_task(record_employee_creation)
+
     return new_employee
+
 
 @router.put("/update/{employee_id}", response_model=employeeResponse)
 async def update_employee(employee_id: int, updated_employee: employeeCreate, employee_service: employee_service = Depends(get_employee_service)):

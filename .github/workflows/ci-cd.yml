@@ -15,7 +15,11 @@ jobs:
     runs-on: ubuntu-latest
     env:
       JWT_SECRET_KEY: test-secret-key-for-ci-only
-
+      DB_USER: test_user
+      DB_PASSWORD: test_password
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_NAME: test_db
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4

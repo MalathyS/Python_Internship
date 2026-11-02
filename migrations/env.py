@@ -19,6 +19,7 @@ from models.employee import Base, Employee
 from models.user import User
 from models.department import Department
 from models.daily_employee_stats import DailyEmployeeStats
+from models.processed_events import ProcessedEvent
 
 config = context.config
 
@@ -37,7 +38,7 @@ def get_database_url():
 
     if switch == "postgres":
         from database_postgres import build_url
-        return build_url("PythonEmployeeDb")
+        return build_url(os.environ["POSTGRES_DB"])
 
     raise ValueError(f"Unsupported DB_SWITCH: {switch}")
 
